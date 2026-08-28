@@ -27,6 +27,11 @@ export async function apiRequest<T>(
 ): Promise<T> {
   const headers = new Headers(options.headers);
 
+  const token = typeof window !== "undefined" ? localStorage.getItem("accessToken") : null;
+  if (token && !headers.has("Authorization")) {
+    headers.set("Authorization", `Bearer ${token}`);
+  }
+
   if (options.body && !headers.has("Content-Type")) {
     headers.set("Content-Type", "application/json");
   }
@@ -45,6 +50,15 @@ export async function apiRequest<T>(
   const body = (isJson ? await response.json() : undefined) as ApiErrorBody | undefined;
 
   if (!response.ok) {
+    if (
+      response.status === 401 &&
+      !path.startsWith("/api/auth/login") &&
+      !path.startsWith("/api/auth/register")
+    ) {
+      if (typeof window !== "undefined") {
+        localStorage.removeItem("accessToken");
+      }
+    }
     throw new ApiError(body?.message ?? "Request failed", response.status, body?.details);
   }
 

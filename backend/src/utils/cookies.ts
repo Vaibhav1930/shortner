@@ -9,9 +9,10 @@ export function setAuthCookie(res: Response, token: string): void {
     httpOnly: true,
     secure: env.NODE_ENV === "production",
     sameSite: env.NODE_ENV === "production" ? "none" : "lax",
+    partitioned: env.NODE_ENV === "production",
     maxAge: oneWeekMs,
     path: "/",
-  });
+  } as any);
 }
 
 export function clearAuthCookie(res: Response): void {
@@ -19,8 +20,9 @@ export function clearAuthCookie(res: Response): void {
     httpOnly: true,
     secure: env.NODE_ENV === "production",
     sameSite: env.NODE_ENV === "production" ? "none" : "lax",
+    partitioned: env.NODE_ENV === "production",
     path: "/",
-  });
+  } as any);
 }
 
 export function getAuthCookieName(): string {

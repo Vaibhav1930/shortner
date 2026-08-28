@@ -20,6 +20,9 @@ export const useAuthStore = defineStore("auth", {
 
       try {
         const response = await authApi.register(payload);
+        if (response.token) {
+          localStorage.setItem("accessToken", response.token);
+        }
         this.user = response.user;
         this.initialized = true;
       } finally {
@@ -31,6 +34,9 @@ export const useAuthStore = defineStore("auth", {
 
       try {
         const response = await authApi.login(payload);
+        if (response.token) {
+          localStorage.setItem("accessToken", response.token);
+        }
         this.user = response.user;
         this.initialized = true;
       } finally {
@@ -43,6 +49,7 @@ export const useAuthStore = defineStore("auth", {
       try {
         await authApi.logout();
       } finally {
+        localStorage.removeItem("accessToken");
         this.user = null;
         this.initialized = true;
         this.loading = false;
@@ -59,6 +66,7 @@ export const useAuthStore = defineStore("auth", {
         const response = await authApi.getCurrentUser();
         this.user = response.user;
       } catch {
+        localStorage.removeItem("accessToken");
         this.user = null;
       } finally {
         this.initialized = true;

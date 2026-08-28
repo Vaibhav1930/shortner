@@ -1,9 +1,13 @@
 <script setup lang="ts">
 import { onMounted, onUnmounted, reactive, ref } from "vue";
-import { RouterLink } from "vue-router";
+import { RouterLink, useRouter } from "vue-router";
 import { ApiError } from "../api/client";
 import { createLink, fetchLinks, type LinkSummary } from "../api/links";
 import { createLinkFormSchema } from "../schemas/link";
+import { useAuthStore } from "../stores/auth";
+
+const authStore = useAuthStore();
+const router = useRouter();
 
 const links = ref<LinkSummary[]>([]);
 const loading = ref(true);
@@ -55,6 +59,12 @@ async function loadLinks(silent = false): Promise<void> {
       formError.value = "";
     }
   } catch (error) {
+    if (error instanceof ApiError && error.status === 401) {
+      authStore.user = null;
+      stopPolling();
+      await router.push({ name: "login" });
+      return;
+    }
     if (!silent) {
       formError.value = error instanceof ApiError ? error.message : "Could not load links";
     }

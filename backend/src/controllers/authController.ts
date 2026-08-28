@@ -9,7 +9,7 @@ export const register = asyncHandler(async (req: Request, res: Response) => {
   const result = await registerUser(input);
 
   setAuthCookie(res, result.token);
-  res.status(201).json({ user: result.user });
+  res.status(201).json({ user: result.user, token: result.token });
 });
 
 export const login = asyncHandler(async (req: Request, res: Response) => {
@@ -17,7 +17,7 @@ export const login = asyncHandler(async (req: Request, res: Response) => {
   const result = await loginUser(input);
 
   setAuthCookie(res, result.token);
-  res.json({ user: result.user });
+  res.json({ user: result.user, token: result.token });
 });
 
 export const logout = asyncHandler(async (_req: Request, res: Response) => {

@@ -1,10 +1,14 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref, watch } from "vue";
-import { RouterLink, useRoute } from "vue-router";
+import { RouterLink, useRoute, useRouter } from "vue-router";
 import { ApiError } from "../api/client";
 import { fetchLinkStats, type LinkStats } from "../api/links";
+import { useAuthStore } from "../stores/auth";
 
 const route = useRoute();
+const router = useRouter();
+const authStore = useAuthStore();
+
 const link = ref<LinkStats | null>(null);
 const loading = ref(true);
 const errorMessage = ref("");
@@ -35,6 +39,12 @@ async function loadStats(silent = false): Promise<void> {
       errorMessage.value = "";
     }
   } catch (error) {
+    if (error instanceof ApiError && error.status === 401) {
+      authStore.user = null;
+      stopPolling();
+      await router.push({ name: "login" });
+      return;
+    }
     if (!silent) {
       errorMessage.value = error instanceof ApiError ? error.message : "Could not load stats";
     }
