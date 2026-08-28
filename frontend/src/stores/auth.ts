@@ -42,9 +42,9 @@ export const useAuthStore = defineStore("auth", {
 
       try {
         await authApi.logout();
+      } finally {
         this.user = null;
         this.initialized = true;
-      } finally {
         this.loading = false;
       }
     },

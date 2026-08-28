@@ -115,7 +115,7 @@ Backend and database on Render:
 
 - `render.yaml` defines a PostgreSQL database and web service.
 - Set `JWT_SECRET`, `CLIENT_ORIGIN`, and `APP_BASE_URL` in Render.
-- `CLIENT_ORIGIN` should be your Vercel app URL.
+- `CLIENT_ORIGIN` should be your Vercel app URL. For multiple allowed origins, use a comma-separated list.
 - `APP_BASE_URL` should be your Render API URL, because public short links live on the backend.
 
 Railway is also suitable: deploy `backend`, attach a PostgreSQL database, run `npm run prisma:deploy` during deploy, and set the same environment variables.

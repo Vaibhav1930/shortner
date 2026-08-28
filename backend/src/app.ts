@@ -2,7 +2,7 @@ import cookieParser from "cookie-parser";
 import cors from "cors";
 import express from "express";
 import helmet from "helmet";
-import { env } from "./config/env";
+import { corsOptions } from "./config/cors";
 import { errorHandler } from "./middleware/errorHandler";
 import { authRouter } from "./routes/authRoutes";
 import { linkRouter } from "./routes/linkRoutes";
@@ -14,12 +14,7 @@ export const app = express();
 app.set("trust proxy", 1);
 
 app.use(helmet());
-app.use(
-  cors({
-    origin: env.CLIENT_ORIGIN,
-    credentials: true,
-  }),
-);
+app.use(cors(corsOptions));
 app.use(express.json({ limit: "1mb" }));
 app.use(cookieParser());
 

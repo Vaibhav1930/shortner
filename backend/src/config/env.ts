@@ -8,7 +8,7 @@ const envSchema = z.object({
   JWT_SECRET: z
     .string()
     .min(32, "JWT_SECRET must be at least 32 characters long"),
-  CLIENT_ORIGIN: z.url().default("http://localhost:5173"),
+  CLIENT_ORIGIN: z.string().min(1).default("http://localhost:5173"),
   APP_BASE_URL: z.url().default("http://localhost:4000"),
 });
 

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from "vue";
+import { computed, onMounted, onUnmounted, ref, watch } from "vue";
 import { RouterLink, useRoute } from "vue-router";
 import { ApiError } from "../api/client";
 import { fetchLinkStats, type LinkStats } from "../api/links";
@@ -11,6 +11,9 @@ const errorMessage = ref("");
 const copied = ref(false);
 
 const linkId = computed(() => String(route.params.id));
+const POLL_INTERVAL_MS = 3000;
+let pollTimer: ReturnType<typeof setInterval> | null = null;
+let copyResetTimer: ReturnType<typeof setTimeout> | null = null;
 
 function formatDate(value: string): string {
   return new Intl.DateTimeFormat(undefined, {
@@ -19,16 +22,48 @@ function formatDate(value: string): string {
   }).format(new Date(value));
 }
 
-async function loadStats(): Promise<void> {
-  loading.value = true;
-  errorMessage.value = "";
+async function loadStats(silent = false): Promise<void> {
+  if (!silent) {
+    loading.value = true;
+    errorMessage.value = "";
+  }
 
   try {
-    link.value = await fetchLinkStats(linkId.value);
+    const data = await fetchLinkStats(linkId.value);
+    link.value = data;
+    if (silent) {
+      errorMessage.value = "";
+    }
   } catch (error) {
-    errorMessage.value = error instanceof ApiError ? error.message : "Could not load stats";
+    if (!silent) {
+      errorMessage.value = error instanceof ApiError ? error.message : "Could not load stats";
+    }
   } finally {
-    loading.value = false;
+    if (!silent) {
+      loading.value = false;
+    }
+  }
+}
+
+function startPolling(): void {
+  stopPolling();
+  pollTimer = setInterval(() => {
+    if (document.visibilityState === "visible") {
+      void loadStats(true);
+    }
+  }, POLL_INTERVAL_MS);
+}
+
+function stopPolling(): void {
+  if (pollTimer) {
+    clearInterval(pollTimer);
+    pollTimer = null;
+  }
+}
+
+function handleVisibilityChange(): void {
+  if (document.visibilityState === "visible") {
+    void loadStats(true);
   }
 }
 
@@ -39,10 +74,32 @@ async function copyShortUrl(): Promise<void> {
 
   await navigator.clipboard.writeText(link.value.shortUrl);
   copied.value = true;
+  if (copyResetTimer) {
+    clearTimeout(copyResetTimer);
+  }
+  copyResetTimer = setTimeout(() => {
+    copied.value = false;
+  }, 2000);
 }
 
-onMounted(() => {
+watch(linkId, () => {
   void loadStats();
+  startPolling();
+});
+
+onMounted(() => {
+  void loadStats().then(() => {
+    startPolling();
+  });
+  document.addEventListener("visibilitychange", handleVisibilityChange);
+});
+
+onUnmounted(() => {
+  stopPolling();
+  if (copyResetTimer) {
+    clearTimeout(copyResetTimer);
+  }
+  document.removeEventListener("visibilitychange", handleVisibilityChange);
 });
 </script>
 
@@ -55,7 +112,12 @@ onMounted(() => {
 
     <template v-else-if="link">
       <div class="stats-header" style="margin-top: 18px">
-        <h1>Link stats</h1>
+        <div style="display: flex; align-items: center; gap: 10px">
+          <h1 style="margin: 0">Link stats</h1>
+          <span class="live-pill" title="Auto-updating stats every 3 seconds">
+            <span class="pulse-dot"></span> Live
+          </span>
+        </div>
         <div class="copy-row">
           <a class="short-link" :href="link.shortUrl" target="_blank" rel="noreferrer">
             {{ link.shortUrl }}

@@ -1,5 +1,7 @@
-export const API_BASE_URL =
-  import.meta.env.VITE_API_BASE_URL?.replace(/\/$/, "") ?? "http://localhost:4000";
+const configuredApiBaseUrl = import.meta.env.VITE_API_BASE_URL as string | undefined;
+const defaultApiBaseUrl = `${window.location.protocol}//${window.location.hostname}:4000`;
+
+export const API_BASE_URL = configuredApiBaseUrl?.replace(/\/$/, "") ?? defaultApiBaseUrl;
 
 interface ApiErrorBody {
   message?: string;

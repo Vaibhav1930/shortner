@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, reactive, ref } from "vue";
+import { onMounted, onUnmounted, reactive, ref } from "vue";
 import { RouterLink } from "vue-router";
 import { ApiError } from "../api/client";
 import { createLink, fetchLinks, type LinkSummary } from "../api/links";
@@ -10,6 +10,10 @@ const loading = ref(true);
 const submitting = ref(false);
 const formError = ref("");
 const successMessage = ref("");
+
+const POLL_INTERVAL_MS = 3000;
+let pollTimer: ReturnType<typeof setInterval> | null = null;
+let messageTimer: ReturnType<typeof setTimeout> | null = null;
 
 const form = reactive({
   originalUrl: "",
@@ -26,16 +30,60 @@ function formatDate(value: string): string {
   }).format(new Date(value));
 }
 
-async function loadLinks(): Promise<void> {
-  loading.value = true;
-  formError.value = "";
+function setAutoClearingSuccess(message: string, durationMs = 2500): void {
+  successMessage.value = message;
+  if (messageTimer) {
+    clearTimeout(messageTimer);
+  }
+  messageTimer = setTimeout(() => {
+    if (successMessage.value === message) {
+      successMessage.value = "";
+    }
+  }, durationMs);
+}
+
+async function loadLinks(silent = false): Promise<void> {
+  if (!silent) {
+    loading.value = true;
+    formError.value = "";
+  }
 
   try {
-    links.value = await fetchLinks();
+    const fetched = await fetchLinks();
+    links.value = fetched;
+    if (silent) {
+      formError.value = "";
+    }
   } catch (error) {
-    formError.value = error instanceof ApiError ? error.message : "Could not load links";
+    if (!silent) {
+      formError.value = error instanceof ApiError ? error.message : "Could not load links";
+    }
   } finally {
-    loading.value = false;
+    if (!silent) {
+      loading.value = false;
+    }
+  }
+}
+
+function startPolling(): void {
+  stopPolling();
+  pollTimer = setInterval(() => {
+    if (document.visibilityState === "visible" && !submitting.value) {
+      void loadLinks(true);
+    }
+  }, POLL_INTERVAL_MS);
+}
+
+function stopPolling(): void {
+  if (pollTimer) {
+    clearInterval(pollTimer);
+    pollTimer = null;
+  }
+}
+
+function handleVisibilityChange(): void {
+  if (document.visibilityState === "visible") {
+    void loadLinks(true);
   }
 }
 
@@ -57,7 +105,7 @@ async function handleCreate(): Promise<void> {
     const link = await createLink(validation.data.originalUrl);
     links.value = [link, ...links.value];
     form.originalUrl = "";
-    successMessage.value = "Short link created";
+    setAutoClearingSuccess("Short link created", 3000);
   } catch (error) {
     formError.value = error instanceof ApiError ? error.message : "Could not create link";
   } finally {
@@ -67,18 +115,34 @@ async function handleCreate(): Promise<void> {
 
 async function copyShortUrl(shortUrl: string): Promise<void> {
   await navigator.clipboard.writeText(shortUrl);
-  successMessage.value = "Copied";
+  setAutoClearingSuccess("Copied", 2000);
 }
 
 onMounted(() => {
-  void loadLinks();
+  void loadLinks().then(() => {
+    startPolling();
+  });
+  document.addEventListener("visibilitychange", handleVisibilityChange);
+});
+
+onUnmounted(() => {
+  stopPolling();
+  if (messageTimer) {
+    clearTimeout(messageTimer);
+  }
+  document.removeEventListener("visibilitychange", handleVisibilityChange);
 });
 </script>
 
 <template>
   <section>
     <div class="toolbar">
-      <h1>Dashboard</h1>
+      <div style="display: flex; align-items: center; gap: 10px">
+        <h1>Dashboard</h1>
+        <span class="live-pill" title="Auto-updating clicks every 3 seconds">
+          <span class="pulse-dot"></span> Live
+        </span>
+      </div>
     </div>
 
     <form class="panel inline-form" @submit.prevent="handleCreate">
