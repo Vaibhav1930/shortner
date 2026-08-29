@@ -104,26 +104,40 @@ Default local URLs:
 
 ## Deployment
 
-Frontend on Vercel:
+### Deploying Frontend and Backend on Render
+
+When deploying the frontend as a Render **Static Site** and backend as a Render **Web Service**:
+
+1. **Frontend Static Site Routing (Redirects / Rewrites)**:
+   In your Render Dashboard for the frontend Static Site, open **Redirects/Rewrites** and configure these rules in order:
+   - **Rule 1**: Source `/login` &rarr; Destination `/index.html` (Action: `Rewrite`)
+   - **Rule 2**: Source `/register` &rarr; Destination `/index.html` (Action: `Rewrite`)
+   - **Rule 3**: Source `/dashboard` &rarr; Destination `/index.html` (Action: `Rewrite`)
+   - **Rule 4**: Source `/links/*` &rarr; Destination `/index.html` (Action: `Rewrite`)
+   - **Rule 5**: Source `/api/*` &rarr; Destination `https://<your-backend-api>.onrender.com/api/*` (Action: `Rewrite`)
+   - **Rule 6**: Source `/*` &rarr; Destination `https://<your-backend-api>.onrender.com/*` (Action: `Rewrite`)
+
+   *Important*: Do not keep a catch-all `/* -> /index.html` rewrite, as it intercepts short codes and causes a blank page delay. Static assets (`/assets/*`) are served directly from disk automatically.
+
+2. **Environment Variables**:
+   - Backend:
+     - `CLIENT_ORIGIN`: `https://your-frontend.onrender.com` (or custom domain)
+     - `APP_BASE_URL`: `https://your-frontend.onrender.com` (or your short link domain)
+     - `JWT_SECRET`: 32+ character random secret
+     - `DATABASE_URL`: PostgreSQL connection string
+   - Frontend:
+     - `VITE_API_BASE_URL`: `https://your-backend-api.onrender.com`
+
+3. **Render Blueprint (`render.yaml`)**:
+   `render.yaml` defines the database, backend web service, and frontend static site with the correct route rewrite rules already configured.
+
+### Frontend on Vercel (Alternative)
 
 - Root directory: `frontend`
 - Build command: `npm run build`
 - Output directory: `dist`
 - Environment variable: `VITE_API_BASE_URL=https://your-api.example.com`
-
-Backend and database on Render:
-
-- `render.yaml` defines a PostgreSQL database and web service.
-- Set `JWT_SECRET`, `CLIENT_ORIGIN`, and `APP_BASE_URL` in Render.
-- `CLIENT_ORIGIN` should be your Vercel app URL. For multiple allowed origins, use a comma-separated list.
-- `APP_BASE_URL` should be your Render API URL, because public short links live on the backend.
-
-Railway is also suitable: deploy `backend`, attach a PostgreSQL database, run `npm run prisma:deploy` during deploy, and set the same environment variables.
-
-## Deployed Links
-
-- Frontend: _add Vercel URL after deployment_
-- Backend: _add Render or Railway URL after deployment_
+- `vercel.json` rewrites are restricted to SPA routes to prevent capturing short links.
 
 ## Build Checks
 

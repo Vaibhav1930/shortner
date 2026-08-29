@@ -23,3 +23,25 @@ services:
         sync: false
       - key: APP_BASE_URL
         sync: false
+
+  - type: static
+    name: url-shortener-frontend
+    rootDir: frontend
+    buildCommand: npm ci && npm run build
+    staticPublishPath: dist
+    routes:
+      - type: rewrite
+        source: /login
+        destination: /index.html
+      - type: rewrite
+        source: /register
+        destination: /index.html
+      - type: rewrite
+        source: /dashboard
+        destination: /index.html
+      - type: rewrite
+        source: /links/*
+        destination: /index.html
+      - type: rewrite
+        source: /*
+        destination: https://url-shortener-api.onrender.com/*
