@@ -19,6 +19,7 @@ const fieldErrors = reactive<Record<"email" | "password", string>>({
   password: "",
 });
 const formError = ref("");
+const isSubmitting = ref(false);
 
 function clearErrors(): void {
   fieldErrors.email = "";
@@ -27,22 +28,30 @@ function clearErrors(): void {
 }
 
 async function handleSubmit(): Promise<void> {
+  if (isSubmitting.value || authStore.loading) {
+    return;
+  }
+
   clearErrors();
 
+  const validation = loginFormSchema.safeParse(form);
+
+  if (!validation.success) {
+    const errors = validation.error.flatten().fieldErrors;
+    fieldErrors.email = errors.email?.[0] ?? "";
+    fieldErrors.password = errors.password?.[0] ?? "";
+    return;
+  }
+
+  isSubmitting.value = true;
+
   try {
-    const validation = loginFormSchema.safeParse(form);
-
-    if (!validation.success) {
-      const errors = validation.error.flatten().fieldErrors;
-      fieldErrors.email = errors.email?.[0] ?? "";
-      fieldErrors.password = errors.password?.[0] ?? "";
-      return;
-    }
-
     await authStore.login(validation.data);
     await router.push(typeof route.query.redirect === "string" ? route.query.redirect : "/dashboard");
   } catch (error) {
     formError.value = error instanceof ApiError ? error.message : "Could not sign in";
+  } finally {
+    isSubmitting.value = false;
   }
 }
 </script>
@@ -66,8 +75,8 @@ async function handleSubmit(): Promise<void> {
         />
         <span v-if="fieldErrors.password" class="error-text">{{ fieldErrors.password }}</span>
       </div>
-      <button class="button" type="submit" :disabled="authStore.loading">
-        {{ authStore.loading ? "Signing in..." : "Sign in" }}
+      <button class="button" type="submit" :disabled="authStore.loading || isSubmitting">
+        {{ (authStore.loading || isSubmitting) ? "Signing in..." : "Sign in" }}
       </button>
       <p v-if="formError" class="error-text status-message">{{ formError }}</p>
       <p class="auth-switch">

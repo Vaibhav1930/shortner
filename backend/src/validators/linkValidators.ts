@@ -26,4 +26,10 @@ export const shortCodeParamsSchema = z.object({
   shortCode: z.string().regex(/^[A-Za-z0-9]{6,12}$/, "Invalid short code"),
 });
 
+export const listLinksQuerySchema = z.object({
+  page: z.coerce.number().int().min(1).default(1),
+  limit: z.coerce.number().int().min(1).max(100).default(10),
+});
+
 export type CreateLinkInput = z.infer<typeof createLinkSchema>;
+export type ListLinksQuery = z.infer<typeof listLinksQuerySchema>;

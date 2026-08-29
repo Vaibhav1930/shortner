@@ -15,7 +15,7 @@ const errorMessage = ref("");
 const copied = ref(false);
 
 const linkId = computed(() => String(route.params.id));
-const POLL_INTERVAL_MS = 3000;
+const POLL_INTERVAL_MS = 15000;
 let pollTimer: ReturnType<typeof setInterval> | null = null;
 let copyResetTimer: ReturnType<typeof setTimeout> | null = null;
 
@@ -124,7 +124,7 @@ onUnmounted(() => {
       <div class="stats-header" style="margin-top: 18px">
         <div style="display: flex; align-items: center; gap: 10px">
           <h1 style="margin: 0">Link stats</h1>
-          <span class="live-pill" title="Auto-updating stats every 3 seconds">
+          <span class="live-pill" title="Auto-updating stats every 15 seconds">
             <span class="pulse-dot"></span> Live
           </span>
         </div>

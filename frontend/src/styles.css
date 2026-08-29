@@ -317,6 +317,53 @@ a {
   overflow-x: auto;
 }
 
+.danger-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 32px;
+  border-radius: 6px;
+  padding: 0 10px;
+  border: 1px solid #fecdca;
+  background: #ffffff;
+  color: #b42318;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.danger-button:hover:not(:disabled) {
+  background: #fef3f2;
+  border-color: #fda29b;
+}
+
+.danger-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.pagination-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 14px 18px;
+  border-top: 1px solid #e7ebef;
+  background: #ffffff;
+}
+
+.pagination-info {
+  color: #667085;
+  font-size: 0.88rem;
+}
+
+.pagination-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
 @media (max-width: 720px) {
   .app-header {
     align-items: flex-start;
@@ -340,4 +387,15 @@ a {
   .stats-meta {
     grid-template-columns: 1fr;
   }
+
+  .pagination-bar {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+  }
+
+  .pagination-controls {
+    justify-content: space-between;
+  }
 }
+

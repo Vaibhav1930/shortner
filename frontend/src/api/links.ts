@@ -26,9 +26,22 @@ export interface LinkStats {
   clicks: ClickRecord[];
 }
 
-export async function fetchLinks(): Promise<LinkSummary[]> {
-  const response = await apiRequest<{ links: LinkSummary[] }>("/api/links");
-  return response.links;
+export interface PaginationMetadata {
+  page: number;
+  limit: number;
+  total: number;
+  totalPages: number;
+  hasNext: boolean;
+  hasPrevious: boolean;
+}
+
+export interface PaginatedLinksResponse {
+  links: LinkSummary[];
+  pagination: PaginationMetadata;
+}
+
+export async function fetchLinks(page = 1, limit = 10): Promise<PaginatedLinksResponse> {
+  return apiRequest<PaginatedLinksResponse>(`/api/links?page=${page}&limit=${limit}`);
 }
 
 export async function createLink(originalUrl: string): Promise<LinkSummary> {
@@ -38,6 +51,12 @@ export async function createLink(originalUrl: string): Promise<LinkSummary> {
   });
 
   return response.link;
+}
+
+export async function deleteLink(id: string): Promise<void> {
+  await apiRequest<void>(`/api/links/${id}`, {
+    method: "DELETE",
+  });
 }
 
 export async function fetchLinkStats(id: string): Promise<LinkStats> {

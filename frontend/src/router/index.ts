@@ -1,39 +1,38 @@
 import { createRouter, createWebHistory } from "vue-router";
 import { useAuthStore } from "../stores/auth";
-import DashboardView from "../views/DashboardView.vue";
-import LinkStatsView from "../views/LinkStatsView.vue";
-import LoginView from "../views/LoginView.vue";
-import RegisterView from "../views/RegisterView.vue";
-
 export const router = createRouter({
   history: createWebHistory(),
   routes: [
     {
       path: "/",
-      redirect: "/dashboard",
+      redirect: () => {
+        const token =
+          typeof window !== "undefined" ? localStorage.getItem("accessToken") : null;
+        return token ? "/dashboard" : "/login";
+      },
     },
     {
       path: "/login",
       name: "login",
-      component: LoginView,
+      component: () => import("../views/LoginView.vue"),
       meta: { guestOnly: true },
     },
     {
       path: "/register",
       name: "register",
-      component: RegisterView,
+      component: () => import("../views/RegisterView.vue"),
       meta: { guestOnly: true },
     },
     {
       path: "/dashboard",
       name: "dashboard",
-      component: DashboardView,
+      component: () => import("../views/DashboardView.vue"),
       meta: { requiresAuth: true },
     },
     {
       path: "/links/:id",
       name: "link-stats",
-      component: LinkStatsView,
+      component: () => import("../views/LinkStatsView.vue"),
       meta: { requiresAuth: true },
     },
   ],
@@ -41,6 +40,18 @@ export const router = createRouter({
 
 router.beforeEach(async (to) => {
   const authStore = useAuthStore();
+  const hasToken =
+    typeof window !== "undefined" && Boolean(localStorage.getItem("accessToken"));
+
+  // If a public/guest page is visited without any stored token, render immediately
+  // without blocking on an unnecessary /api/auth/me request
+  if (to.meta.guestOnly && !hasToken) {
+    if (!authStore.initialized) {
+      authStore.user = null;
+      authStore.initialized = true;
+    }
+    return true;
+  }
 
   if (!authStore.initialized) {
     await authStore.fetchCurrentUser();
@@ -56,3 +67,4 @@ router.beforeEach(async (to) => {
 
   return true;
 });
+

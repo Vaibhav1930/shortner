@@ -8,10 +8,13 @@ export const redirectToOriginal = asyncHandler(async (req: Request, res: Respons
   const params = shortCodeParamsSchema.parse(req.params);
   const link = await findLinkForRedirect(params.shortCode);
 
-  await recordClick({
+  // Track click asynchronously without blocking the 302 redirect
+  recordClick({
     linkId: link.id,
     ipAddress: req.ip,
     userAgent: req.get("user-agent"),
+  }).catch((err) => {
+    console.error("Failed to record click:", err);
   });
 
   res.redirect(302, link.originalUrl);

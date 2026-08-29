@@ -3,7 +3,7 @@ import { env } from "../config/env";
 import { prisma } from "../lib/prisma";
 import { AppError } from "../utils/AppError";
 import { generateShortCode } from "../utils/shortCode";
-import type { CreateLinkInput } from "../validators/linkValidators";
+import type { CreateLinkInput, ListLinksQuery } from "../validators/linkValidators";
 
 interface LinkSummaryRecord {
   id: string;
@@ -12,6 +12,18 @@ interface LinkSummaryRecord {
   createdAt: Date;
   _count: {
     clicks: number;
+  };
+}
+
+export interface PaginatedLinks {
+  links: ReturnType<typeof toLinkSummary>[];
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+    hasNext: boolean;
+    hasPrevious: boolean;
   };
 }
 
@@ -62,18 +74,42 @@ export async function createLink(userId: string, input: CreateLinkInput) {
   throw new AppError("Could not generate a unique short code", 500);
 }
 
-export async function listLinks(userId: string) {
-  const links = await prisma.link.findMany({
-    where: { userId },
-    orderBy: { createdAt: "desc" },
-    include: {
-      _count: {
-        select: { clicks: true },
-      },
-    },
-  });
+export async function listLinks(
+  userId: string,
+  query: ListLinksQuery = { page: 1, limit: 10 },
+): Promise<PaginatedLinks> {
+  const page = Math.max(1, query.page);
+  const limit = Math.min(100, Math.max(1, query.limit));
+  const skip = (page - 1) * limit;
 
-  return links.map(toLinkSummary);
+  const [total, links] = await prisma.$transaction([
+    prisma.link.count({ where: { userId } }),
+    prisma.link.findMany({
+      where: { userId },
+      orderBy: { createdAt: "desc" },
+      skip,
+      take: limit,
+      include: {
+        _count: {
+          select: { clicks: true },
+        },
+      },
+    }),
+  ]);
+
+  const totalPages = Math.ceil(total / limit) || 1;
+
+  return {
+    links: links.map(toLinkSummary),
+    pagination: {
+      page,
+      limit,
+      total,
+      totalPages,
+      hasNext: page < totalPages,
+      hasPrevious: page > 1,
+    },
+  };
 }
 
 export async function getLinkStats(userId: string, linkId: string) {
@@ -82,9 +118,17 @@ export async function getLinkStats(userId: string, linkId: string) {
       id: linkId,
       userId,
     },
-    include: {
+    select: {
+      id: true,
+      originalUrl: true,
+      shortCode: true,
+      createdAt: true,
+      _count: {
+        select: { clicks: true },
+      },
       clicks: {
         orderBy: { timestamp: "desc" },
+        take: 100,
         select: {
           id: true,
           timestamp: true,
@@ -105,9 +149,28 @@ export async function getLinkStats(userId: string, linkId: string) {
     shortCode: link.shortCode,
     shortUrl: buildShortUrl(link.shortCode),
     createdAt: link.createdAt,
-    totalClicks: link.clicks.length,
+    totalClicks: link._count.clicks,
     clicks: link.clicks,
   };
+}
+
+export async function deleteLink(userId: string, linkId: string): Promise<void> {
+  const link = await prisma.link.findUnique({
+    where: { id: linkId },
+    select: { id: true, userId: true },
+  });
+
+  if (!link) {
+    throw new AppError("Link not found", 404);
+  }
+
+  if (link.userId !== userId) {
+    throw new AppError("Forbidden: You do not have permission to delete this link", 403);
+  }
+
+  await prisma.link.delete({
+    where: { id: linkId },
+  });
 }
 
 export async function findLinkForRedirect(shortCode: string) {
