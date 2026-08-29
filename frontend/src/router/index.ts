@@ -1,5 +1,7 @@
 import { createRouter, createWebHistory } from "vue-router";
+import { API_BASE_URL } from "../api/client";
 import { useAuthStore } from "../stores/auth";
+
 export const router = createRouter({
   history: createWebHistory(),
   routes: [
@@ -35,10 +37,30 @@ export const router = createRouter({
       component: () => import("../views/LinkStatsView.vue"),
       meta: { requiresAuth: true },
     },
+    {
+      path: "/:shortCode([A-Za-z0-9]{6,12})",
+      name: "redirect",
+      beforeEnter: (to) => {
+        const shortCode = to.params.shortCode as string;
+        window.location.replace(`${API_BASE_URL}/${shortCode}`);
+      },
+      component: {
+        template: '<div class="empty-state">Redirecting...</div>',
+      },
+    },
+    {
+      path: "/:pathMatch(.*)*",
+      redirect: "/dashboard",
+    },
   ],
 });
 
+
 router.beforeEach(async (to) => {
+  if (to.name === "redirect") {
+    return true;
+  }
+
   const authStore = useAuthStore();
   const hasToken =
     typeof window !== "undefined" && Boolean(localStorage.getItem("accessToken"));
